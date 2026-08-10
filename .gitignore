@@ -1,0 +1,4 @@
+/.esphome/
+/secrets.yaml
+/ws2811-dual-ic-controller-custom.yaml
+.DS_Store
