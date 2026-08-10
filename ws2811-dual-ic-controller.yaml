@@ -116,7 +116,7 @@ esphome:
   friendly_name: "${node_friendly_name}"
   project:
     name: "dylansallee.ws2811-dual-ic-controller"
-    version: "1.0"
+    version: "1.1"
   name_add_mac_suffix: true
 
   # --------------
@@ -134,7 +134,7 @@ esphome:
     then:
       - light.turn_on:
           id: physical_strip
-          brightness: !lambda "return id(max_brightness).state / 100.0;"
+          brightness: 100%
           effect: "Direct Control"
 
 esp32:
@@ -205,18 +205,6 @@ number:
     step: 1
     initial_value: ${ws2811_default_max_brightness}
     optimistic: true
-    on_value:
-      # Guard: skip during setup() when the initial value is published
-      # but physical_strip's LED buffer hasn't been allocated yet.
-      # The on_boot handler handles the first turn-on safely.
-      - if:
-          condition:
-            light.is_on: physical_strip
-          then:
-            - light.turn_on:
-                id: physical_strip
-                brightness: !lambda "return x / 100.0;"
-                transition_length: 0s
 
 ########################
 # SENSOR CONFIGURATION #
@@ -425,22 +413,28 @@ light:
 
             bool logic_on = id(logic_strip).remote_values.is_on();
             bool effects_on = id(partition_effects).remote_values.is_on();
+            float max_b = id(max_brightness).state / 100.0f;
 
-            // Convert the 0.0-1.0 output floats to 0-255
-            uint8_t r  = id(current_colors)[0] * 255;
-            uint8_t g  = id(current_colors)[1] * 255;
-            uint8_t b  = id(current_colors)[2] * 255;
-            uint8_t cw = id(current_colors)[3] * 255;
-            uint8_t ww = id(current_colors)[4] * 255;
+            // Convert the 0.0-1.0 output floats to 0-255, scaled by max_brightness
+            uint8_t r  = id(current_colors)[0] * 255 * max_b;
+            uint8_t g  = id(current_colors)[1] * 255 * max_b;
+            uint8_t b  = id(current_colors)[2] * 255 * max_b;
+            uint8_t cw = id(current_colors)[3] * 255 * max_b;
+            uint8_t ww = id(current_colors)[4] * 255 * max_b;
             bool has_data = (r > 0 || g > 0 || b > 0 || cw > 0 || ww > 0);
 
             if (effects_on) {
               // --- Mode: Effects ---
               // The partition light controls the RGB (even) ICs via its own
-              // render loop. Clear the CCT (odd) ICs so stale warm/cold white
-              // values from a previous RGBCCT session don't bleed through.
-              for (int i = 1; i < it.size(); i += 2) {
-                it[i] = Color(0, 0, 0);
+              // render loop. Scale the RGB (even) ICs by max_brightness, and
+              // clear the CCT (odd) ICs so stale warm/cold white values from a
+              // previous RGBCCT session don't bleed through.
+              for (int i = 0; i < it.size(); i += 2) {
+                Color c = it[i].get();
+                it[i] = Color(c.r * max_b, c.g * max_b, c.b * max_b);
+                if (i + 1 < it.size()) {
+                  it[i + 1] = Color(0, 0, 0);
+                }
               }
             } else if (logic_on || has_data) {
               // --- Mode: RGBCCT ---
