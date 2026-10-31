@@ -1,6 +1,7 @@
 # AI Disclaimer
 The .yaml template was created with the use of generative AI programming assistants, but has been extensively reviewed, edited, and tested by a professional software developer.
-The custom light components/tests was created **primarially** with the use of generative AI programming assistants, but has been reviewed and tested by a professional software developer.
+
+The custom light components/tests were created **primarially** with the use of generative AI programming assistants, but has been reviewed and tested by a professional software developer.
 
 # esphome-ws2811-dual-ic-controller
 
