@@ -13,9 +13,11 @@ This is a ESPHome .yaml configuration template for controlling a WS2811 Dual-IC 
 
 By default, GPIO pins are defined for a SMLIGHT A1-SLWF-03 device. This template should be easily adaptable to other ESP32-based controllers, especially those designed to run WLED.
 
-WLED is compatible with these strips as of 16.0.1. Home Assistant's WLED integration did not handle RGBCCT strips correctly before its 2026.10 releases, which include some fixes for [issue #146123](https://github.com/home-assistant/core/issues/146123) and [issue #162142](https://github.com/home-assistant/core/issues/162142). However, issues remain when color accuracy and setting colors from custom_components. See also [WLED issue #4641](https://github.com/wled/WLED/issues/4641), which is still open, and [this Home Assistant community post](https://community.home-assistant.io/t/wled-rgb-cct-led-strips-dont-work-correctly-in-home-assistant/963514/9).
+## Why not use WLED?
 
-## Why a custom component
+WLED is compatible with these strips as of 16.0.1. Home Assistant's WLED integration did not handle RGBCCT strips correctly before its 2026.10 releases, which include some fixes for [issue #146123](https://github.com/home-assistant/core/issues/146123) and [issue #162142](https://github.com/home-assistant/core/issues/162142). However, several open issues remain. For example, since those fixes, Home Assistant moves so much of a color into the white channels that saturated colors set with `xy_color`, `hs_color` or `rgb_color` look whitish on these strips. See [issue #189323](https://github.com/home-assistant/core/issues/189323). See also [WLED issue #4641](https://github.com/wled/WLED/issues/4641), which is still open, and [this Home Assistant community post](https://community.home-assistant.io/t/wled-rgb-cct-led-strips-dont-work-correctly-in-home-assistant/963514/9).
+
+## Why a custom component?
 
 ESPHome still has no five channel strip support, as of 2026.10.1. A pull request that added it ([#12414](https://github.com/esphome/esphome/pull/12414)) was closed unmerged in May 2026, and `channel_colors` only accepts RGB or RGBW. So this repository includes `ws2811_dual_ic`, a small light platform that sits on top of ESPHome's normal strip driver.
 
@@ -24,7 +26,7 @@ Each physical segment of the strip has two WS2811 ICs. The component treats that
 ## Features
 
 * **One RGBCCT Light**: Colors, white and effects all live on a single light entity in Home Assistant.
-* **Colors Close to Philips Hue**: Colors are decoded the way Home Assistant encodes them. The white LEDs supply any white a color contains, as they do in a Hue bulb, so near-white scenes look right and saturated colors stay pure.
+* **Colors Close to Philips Hue**: Colors are decoded the way Home Assistant encodes them. The white LEDs supply any white a color contains, as they do in a Hue bulb, so near-white scenes look right and saturated colors stay pure. The light reports RGB and color temperature modes instead of RGBWW, which avoids the Home Assistant conversion behind [issue #189323](https://github.com/home-assistant/core/issues/189323).
 * **Live Calibration**: Sliders in Home Assistant balance the LEDs against a reference light, with no reflash.
 * **Hue Preserved When Dim**: Gamma and brightness are applied once, in floating point, as each frame is sent. A dim color stays that color instead of drifting to white.
 * **Flat White**: Brightness stays the same across the color temperature range. Set `constant_brightness: false` to let the middle of the range run at twice the output.
