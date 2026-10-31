@@ -130,7 +130,7 @@ esphome:
     min_version: "2026.10.0"
     project:
         name: "dylansallee.ws2811-dual-ic-controller"
-        version: "2.1"
+        version: "2.2"
     name_add_mac_suffix: true
 
     # --------------
@@ -142,7 +142,7 @@ esphome:
 
 # The light itself lives in this repository, because ESPHome has no five channel strip support yet.
 # If this file is copied somewhere else, replace "components" with:
-#   source: github://DylanSallee/esphome-ws2811-dual-ic-controller@main
+#   source: github://DylanSallee/esphome-ws2811-dual-ic-controller@v2.2
 external_components:
     - source: components
       components: [ws2811_dual_ic]
