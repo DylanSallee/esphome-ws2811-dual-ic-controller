@@ -1,5 +1,6 @@
-/.esphome/
 .esphome/
+__pycache__/
+/tests/host/.gitignore
 /secrets.yaml
 /ws2811-dual-ic-controller-custom.yaml
 .DS_Store

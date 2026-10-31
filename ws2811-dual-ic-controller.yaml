@@ -3,7 +3,7 @@
 ###############
 # This is a ESPHome .yaml configuration template for controlling a WS2811 Dual-IC FCOB RGBCCT LED strip via an ESP32 device.
 # By default, GPIO pins are defined for a SMLIGHT A1-SLWF-03 device. This template should be easily adaptable to other ESP32-based controllers, especially those designed to run WLED.
-# While WLED is compatible with these strips, the integration with Home Assistant does not handle RGBCCT strips correctly at this time (2026-08-08).
+# WLED is compatible with these strips. Home Assistant's WLED integration did not handle RGBCCT strips correctly before its 2026.10 releases, which include fixes. See the README.
 
 ###########
 # LICENSE #
@@ -48,14 +48,14 @@ substitutions:
     # ws2811_strip_num_ics: the number of ICs on your strip. This is double the number of physical segments.
     ws2811_strip_num_ics: "28" # 28 ICs per m * 1m = 14 segments
     # ws2811_wire_order: the byte order of one segment. The first three bytes go to the segment's first IC.
-    # R, G and B are the colour LEDs, C is cold white, W is warm white, and X is the unused byte.
+    # R, G and B are the color LEDs, C is cold white, W is warm white, and X is the unused byte.
     ws2811_wire_order: "RGBWCX"
     # ws2811_cw_color_temp: the color temperature of the cold white LEDs in Kelvin
     ws2811_cw_color_temp: "6000 K"
     # ws2811_ww_color_temp: the color temperature of the warm white LEDs in Kelvin
     ws2811_ww_color_temp: "3000 K"
     # ws2811_default_power_limit: the default Power Limit in percent, which is otherwise configurable in Home Assistant.
-    # 100 is every channel fully on, which an RGB or white colour never asks for. Set low initially because these
+    # 100 is every channel fully on, which an RGB or white color never asks for. Set low initially because these
     # strips can become very hot, especially when testing on the spool.
     ws2811_default_power_limit: "15"
     # ws2811_color_gamma: decodes colors for the LEDs. 2.2 matches how Home Assistant encodes them.
@@ -65,7 +65,7 @@ substitutions:
     # The next four are only starting points for the sliders in Home Assistant. See "Matching Philips Hue" in the README.
     # ws2811_default_red_balance, green and blue: scale the color LEDs in percent, so that equal amounts look neutral.
     ws2811_default_red_balance: "100"
-    ws2811_default_green_balance: "90"
+    ws2811_default_green_balance: "60"
     ws2811_default_blue_balance: "35"
     # ws2811_default_white_strength: one white channel at full, in percent of the balanced color LEDs at full.
     ws2811_default_white_strength: "100"
@@ -78,9 +78,9 @@ substitutions:
     controller_device_id: "ws2811_controller"
     # controller_device_led_data_pin: pin connected to the LED strip data line.
     controller_device_led_data_pin: GPIO16
-    # controller_device_status_blue_pin: pin connected to the blue status LED. Remove switch -> led_blue if not applicable.
+    # controller_device_status_blue_pin: pin connected to the blue status LED. Remove switch -> led_blue and the led_blue actions under binary_sensor -> Connected if not applicable.
     controller_device_status_blue_pin: GPIO22
-    # controller_device_status_green_pin: pin connected to the green status LED. Remove switch -> led_green if not applicable.
+    # controller_device_status_green_pin: pin connected to the green status LED. Remove switch -> led_green and the led_green actions under binary_sensor -> Connected if not applicable.
     controller_device_status_green_pin: GPIO23
     # controller_device_touch_button_pin: pin connected to the touch button. Remove binary_sensor -> Touch Button if not applicable.
     controller_device_touch_button_pin: GPIO26
@@ -166,7 +166,7 @@ api:
 
 ota:
     - platform: esphome
-      password: !secret ota_password
+      encryption:
 
 wifi:
     ssid: !secret wifi_ssid
@@ -226,8 +226,10 @@ number:
       initial_value: ${ws2811_default_red_balance}
       optimistic: true
       restore_value: true
+      disabled_by_default: true
       on_value:
           - lambda: id(strip_output).set_color_balance(0, x / 100.0f);
+
     - platform: template
       name: "Green Balance"
       device_id: ${controller_device_id}
@@ -241,6 +243,7 @@ number:
       initial_value: ${ws2811_default_green_balance}
       optimistic: true
       restore_value: true
+      disabled_by_default: true
       on_value:
           - lambda: id(strip_output).set_color_balance(1, x / 100.0f);
     - platform: template
@@ -256,6 +259,7 @@ number:
       initial_value: ${ws2811_default_blue_balance}
       optimistic: true
       restore_value: true
+      disabled_by_default: true
       on_value:
           - lambda: id(strip_output).set_color_balance(2, x / 100.0f);
     - platform: template
@@ -271,6 +275,7 @@ number:
       initial_value: ${ws2811_default_white_strength}
       optimistic: true
       restore_value: true
+      disabled_by_default: true
       on_value:
           - lambda: id(strip_output).set_white_strength(x / 100.0f);
 
@@ -333,6 +338,7 @@ sensor:
       unit_of_measurement: "kB"
       accuracy_decimals: 0
       update_interval: 60s
+      disabled_by_default: true
       lambda: return heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024;
 
     - platform: debug
@@ -342,6 +348,7 @@ sensor:
           entity_category: diagnostic
           unit_of_measurement: "ms"
           accuracy_decimals: 1
+          disabled_by_default: true
 
       free:
           name: "Free Heap"
@@ -349,6 +356,7 @@ sensor:
           state_class: measurement
           entity_category: diagnostic
           accuracy_decimals: 0
+          disabled_by_default: true
 
       block:
           name: "Max Free Block"
@@ -381,6 +389,7 @@ binary_sensor:
     - platform: gpio
       name: "Touch Button"
       pin: ${controller_device_touch_button_pin}
+      disabled_by_default: true
 
 #############################
 # TEXT SENSOR CONFIGURATION #
@@ -416,6 +425,7 @@ switch:
       icon: "mdi:palette-swatch"
       optimistic: true
       restore_mode: RESTORE_DEFAULT_ON
+      disabled_by_default: true
       on_turn_on:
           - lambda: id(strip_output).set_white_mix(true);
       on_turn_off:

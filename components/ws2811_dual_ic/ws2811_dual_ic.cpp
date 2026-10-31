@@ -104,7 +104,7 @@ void WS2811DualICLight::clear_effect_data() {
 }
 
 light::LightTraits WS2811DualICLight::get_traits() {
-  // Never RGB_COLD_WARM_WHITE. Home Assistant would show it as RGBWW and move colour into the white
+  // Never RGB_COLD_WARM_WHITE. Home Assistant would show it as RGBWW and move color into the white
   // LEDs through color_rgb_to_rgbww, which ignores how much brighter they are. mix_color() does this
   // here instead, using the real strength of the LEDs.
   light::LightTraits traits;
@@ -231,7 +231,7 @@ light::ESPColorView WS2811DualICLight::get_view_internal(int32_t index) const {
   static uint8_t scratch[3];
   if (this->frame_ == nullptr)
     return {scratch, scratch + 1, scratch + 2, nullptr, nullptr, &this->passthrough_};
-  // The white pointer stays null, so an effect can never add white to a colour.
+  // The white pointer stays null, so an effect can never add white to a color.
   uint8_t *color = this->frame_ + index * 3;
   return {color, color + 1, color + 2, nullptr, this->effect_data_ + index, &this->passthrough_};
 }
@@ -248,7 +248,7 @@ void CrossfadeTransformer::start() {
   this->from_brightness_ = this->light_.brightness_;
   this->to_ = target.is_on() ? this->light_.drive_for_(target) : this->from_;
   this->to_brightness_ = target.get_state() * target.get_brightness();
-  // Turning on should fade the new colour up, not fade across from the colour it had when it went off.
+  // Turning on should fade the new color up, not fade across from the color it had when it went off.
   if (this->from_brightness_ == 0.0f)
     this->from_ = this->to_;
   // ESPHome stops an effect just before a turn-off fade, so keep fading the pixels it left behind.
@@ -257,7 +257,7 @@ void CrossfadeTransformer::start() {
 
 optional<light::LightColorValues> CrossfadeTransformer::apply() {
   const float progress = LightTransformer::smoothed_progress(this->get_progress_());
-  // A running effect owns the pixels, so only its brightness and colour inputs can fade.
+  // A running effect owns the pixels, so only its brightness and color inputs can fade.
   if (this->light_.is_effect_active())
     return light::LightColorValues::lerp(this->get_start_values(), this->get_target_values(), progress);
 

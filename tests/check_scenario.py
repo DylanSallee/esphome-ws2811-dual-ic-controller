@@ -47,9 +47,9 @@ def check(steps):
     add("red is pure red", pixel(last["red_full"]) == (255, 0, 0, 0, 0), pixel(last["red_full"]))
     orange = pixel(last["orange_full"])
     add("orange is decoded, not raw", orange[:3] == (255, round(255 * 0.5**GAMMA), 0), orange)
-    add("colours leave the white LEDs off", orange[3:] == (0, 0), orange)
+    add("colors leave the white LEDs off", orange[3:] == (0, 0), orange)
     dim = pixel(last["orange_dim"])
-    add("a dim colour is not dim white", dim[0] > 0 and dim[2] == 0, dim)
+    add("a dim color is not dim white", dim[0] > 0 and dim[2] == 0, dim)
 
     cold, mid, warm = (pixel(last[n]) for n in ("white_cold", "white_mid", "white_warm"))
     add("cold white uses only cold LEDs", cold == (0, 0, 0, 255, 0), cold)
@@ -67,7 +67,7 @@ def check(steps):
     limited = pixel(last["limit_15"])
     add("limit applies without a new command", limited[:3] == (64, 64, 64), limited)
     limited_red = pixel(last["limit_15_red"])
-    add("limit lets a pure colour stay brighter", limited_red[0] == 191, limited_red)
+    add("limit lets a pure color stay brighter", limited_red[0] == 191, limited_red)
     half = pixel(last["limit_15_half_brightness"])
     expected = round(191 * 0.5**2.2)
     add("slider still works under the limit", abs(half[0] - expected) <= 1, f"{half} expected {expected}")
@@ -75,10 +75,10 @@ def check(steps):
     down = [pixel(f)[0] for f in steps["fade_off"]]
     add("fade off ends at zero", down[-1] == 0, down[-3:])
     add("fade off never rises", all(a >= b for a, b in zip(down[1:], down[2:])))
-    add("fade off keeps the colour", all(pixel(f)[1:] == (0, 0, 0, 0) for f in steps["fade_off"]))
+    add("fade off keeps the color", all(pixel(f)[1:] == (0, 0, 0, 0) for f in steps["fade_off"]))
 
-    up = steps["fade_on_new_colour"]
-    add("fade on only shows the new colour", all(pixel(f)[0] == 0 for f in up))
+    up = steps["fade_on_new_color"]
+    add("fade on only shows the new color", all(pixel(f)[0] == 0 for f in up))
     add("fade on reaches full", pixel(up[-1])[2] == 255, pixel(up[-1]))
 
     jump = steps["interrupted"]
@@ -88,21 +88,21 @@ def check(steps):
 
     effect = steps["effect_from_white"][2:]
     add("effect turns the white LEDs off", all(pixel(f)[3:] == (0, 0) for f in effect))
-    add("effect draws colours", not uniform(effect[-1]))
+    add("effect draws colors", not uniform(effect[-1]))
     add("effect rainbow stays saturated", min(min(pixel(effect[-1], i)[:3]) for i in range(PIXELS)) <= 3)
     add("stopping an effect restores white", pixel(last["effect_stop"]) == (0, 0, 0, 0, 255), pixel(last["effect_stop"]))
 
     fade_frames = steps["effect_fade_off"]
     lit = [f for f in fade_frames if max(f) >= 8]
-    # The fade must never fall back to one solid colour. Below level 8 a rainbow can round to one.
+    # The fade must never fall back to one solid color. Below level 8 a rainbow can round to one.
     add("an effect fades out as itself", all(not uniform(f) for f in lit), f"{len(lit)} lit frames")
     add("an effect fade ends black", max(fade_frames[-1]) == 0)
-    add("the next colour shows after an effect fade", pixel(last["after_effect_fade"]) == (0, 0, 0, 0, 255))
+    add("the next color shows after an effect fade", pixel(last["after_effect_fade"]) == (0, 0, 0, 0, 255))
 
     held = {tuple(pixel(f, 3)) for f in steps["effect_readback"][3:]}
     add("effects read back what they wrote", len(held) == 1, held)
     full = pixel(last["effect_readback"])
-    add("the effect colour is decoded once", full == (129, 19, 3, 0, 0), full)
+    add("the effect color is decoded once", full == (129, 19, 3, 0, 0), full)
     half = pixel(last["effect_half_brightness"])
     add("effects follow the brightness slider", half[:2] == (28, 4), half)
     capped = pixel(last["effect_limit_5"])
@@ -112,11 +112,11 @@ def check(steps):
 
     flash = steps["effect_flash"]
     add("flash reaches white", any(pixel(f)[4] > 200 for f in flash))
-    add("flash returns to the colour", pixel(flash[-1]) == (255, 0, 0, 0, 0), pixel(flash[-1]))
+    add("flash returns to the color", pixel(flash[-1]) == (255, 0, 0, 0, 0), pixel(flash[-1]))
 
     warm_mix = pixel(last["white_mix_warm"])
-    add("a warm white colour uses the warm LEDs", warm_mix[4] == 255 and warm_mix[2] == 0, warm_mix)
-    add("a saturated colour stays off the white LEDs", pixel(last["white_mix_red"]) == (255, 0, 0, 0, 0))
+    add("a warm white color uses the warm LEDs", warm_mix[4] == 255 and warm_mix[2] == 0, warm_mix)
+    add("a saturated color stays off the white LEDs", pixel(last["white_mix_red"]) == (255, 0, 0, 0, 0))
     frames = steps["balance_live"]
     add("balance applies to the next frame", any(pixel(f)[:2] == (255, 128) for f in frames), pixel(frames[0]))
     add("balance can change without a new command", pixel(frames[-1])[:2] == (255, 255), pixel(frames[-1]))

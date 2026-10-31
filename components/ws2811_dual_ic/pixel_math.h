@@ -1,6 +1,6 @@
 #pragma once
 
-// Pure colour math for one dual-IC pixel. No ESPHome headers, so tests can run on a desktop.
+// Pure color math for one dual-IC pixel. No ESPHome headers, so tests can run on a desktop.
 
 #include <algorithm>
 #include <cstddef>
@@ -52,14 +52,14 @@ struct WhiteLeds {
   float warm[3]{1.0f, 1.0f, 1.0f};
 };
 
-/// The white light a colour contains: its amount, and the share of that from the warm LEDs.
+/// The white light a color contains: its amount, and the share of that from the warm LEDs.
 struct WhiteContent {
   float amount{0.0f};
   float warm_share{0.0f};
 };
 
-/// Find the most white light that fits inside a colour without overshooting any of its channels.
-/// A saturated colour has none, so it stays on the colour LEDs and cannot wash out. A colour close
+/// Find the most white light that fits inside a color without overshooting any of its channels.
+/// A saturated color has none, so it stays on the color LEDs and cannot wash out. A color close
 /// to a white the LEDs can make is nearly all white, which is how a Hue bulb renders its whites.
 inline WhiteContent find_white(const float *color, const WhiteLeds &leds) {
   const auto amount_at = [&](float warm_share) {
@@ -91,9 +91,9 @@ inline WhiteContent find_white(const float *color, const WhiteLeds &leds) {
   return best;
 }
 
-/// Drive that shows a linear colour as brightly as the LEDs allow.
-/// `balance` scales the colour LEDs so equal red, green and blue give neutral white. `white_strength`
-/// is one white channel at full, relative to the balanced colour LEDs at full.
+/// Drive that shows a linear color as brightly as the LEDs allow.
+/// `balance` scales the color LEDs so equal red, green and blue give neutral white. `white_strength`
+/// is one white channel at full, relative to the balanced color LEDs at full.
 inline Drive mix_color(const float *color, const float *balance, const WhiteLeds &leds, float white_strength,
                        bool use_white) {
   Drive drive;
@@ -119,7 +119,7 @@ inline Drive mix_color(const float *color, const float *balance, const WhiteLeds
 
 /// Round linear drive levels to the 8-bit values the WS2811 takes.
 /// A lit pixel too dim for 8 bits keeps only its strongest channel at level 1. Raising every lit
-/// channel to 1 instead would turn a dim colour into dim white.
+/// channel to 1 instead would turn a dim color into dim white.
 inline void quantize(const float *drive, uint8_t *levels, size_t count) {
   size_t strongest = 0;
   bool any_lit = false;

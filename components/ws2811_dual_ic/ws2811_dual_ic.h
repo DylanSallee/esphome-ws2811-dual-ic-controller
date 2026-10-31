@@ -8,7 +8,7 @@
 
 #include "pixel_math.h"
 
-// ESPHome PR #21577 replaces get_view_internal() with a colour accessor. It adds this file, which
+// ESPHome PR #21577 replaces get_view_internal() with a color accessor. It adds this file, which
 // is a safer test than a version number because the PR has no confirmed release yet.
 #if __has_include("esphome/components/light/esp_color_view.cpp")
 #define WS2811_DUAL_IC_COLOR_ACCESSOR
@@ -21,7 +21,7 @@ namespace esphome::ws2811_dual_ic {
 /// This wraps an addressable strip that holds twice as many LEDs as there are pixels, and treats it
 /// as a plain byte pipe to the ICs. Effects draw into frame_ with no correction applied. Gamma,
 /// brightness and the power limit are then applied once, in float, as each frame is sent. That is
-/// what keeps colours saturated when dim, and lets effects read their pixels back unchanged.
+/// what keeps colors saturated when dim, and lets effects read their pixels back unchanged.
 class WS2811DualICLight final : public light::AddressableLight {
   friend class CrossfadeTransformer;
 
@@ -55,7 +55,6 @@ class WS2811DualICLight final : public light::AddressableLight {
 
   /// Highest load allowed, as a share of the strip's rated power. Safe to call before setup().
   void set_power_limit(float limit);
-  float get_power_limit() const { return this->power_limit_; }
   /// Share of the strip's rated power used by the last frame, assuming equal channel current.
   float get_load() const { return this->load_; }
 
@@ -81,9 +80,9 @@ class WS2811DualICLight final : public light::AddressableLight {
   light::ESPColorCorrection passthrough_{};
 #endif
 
-  /// Recompute the shown colour after a calibration change.
+  /// Recompute the shown color after a calibration change.
   void refresh_();
-  /// Drive for a colour at full brightness, including gamma and channel balance.
+  /// Drive for a color at full brightness, including gamma and channel balance.
   Drive drive_for_(const light::LightColorValues &values) const;
   light::AddressableLight *strip_() const {
     return static_cast<light::AddressableLight *>(this->strip_state_->get_output());
@@ -113,11 +112,11 @@ class WS2811DualICLight final : public light::AddressableLight {
   Drive drive_{};
   float brightness_{0.0f};
   float load_{0.0f};
-  bool frame_on_strip_{false};  // The strip shows frame_, not one uniform colour
+  bool frame_on_strip_{false};  // The strip shows frame_, not one uniform color
   bool fading_frame_{false};    // A turn-off is fading out the frame an effect left behind
 };
 
-/// Fades colour in linear light and brightness along the slider's curve, so a change between RGB
+/// Fades color in linear light and brightness along the slider's curve, so a change between RGB
 /// and white is a crossfade. ESPHome's stock transition dips through black instead.
 class CrossfadeTransformer final : public light::LightTransformer {
  public:

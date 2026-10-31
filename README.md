@@ -1,3 +1,7 @@
+# AI Disclaimer
+The .yaml template was created with the use of generative AI programming assistants, but has been extensively reviewed, edited, and tested by a professional software developer.
+The custom light components/tests was created **primarially** with the use of generative AI programming assistants, but has been reviewed and tested by a professional software developer.
+
 # esphome-ws2811-dual-ic-controller
 
 An ESPHome .yaml configuration template for controlling WS2811 Dual-IC FCOB RGBCCT LED strips via ESP32 devices.
@@ -8,7 +12,7 @@ This is a ESPHome .yaml configuration template for controlling a WS2811 Dual-IC 
 
 By default, GPIO pins are defined for a SMLIGHT A1-SLWF-03 device. This template should be easily adaptable to other ESP32-based controllers, especially those designed to run WLED.
 
-While WLED is compatible with these strips as of 16.0.1, the integration with Home Assistant does not handle RGBCCT strips correctly at this time (2026-08-08). See [issue #146123](https://github.com/home-assistant/core/issues/146123), [issue #162142](https://github.com/home-assistant/core/issues/162142) and [issue #4641](https://github.com/wled/WLED/issues/4641), along with [this home assistant community post](https://community.home-assistant.io/t/wled-rgb-cct-led-strips-dont-work-correctly-in-home-assistant/963514/9).
+WLED is compatible with these strips as of 16.0.1. Home Assistant's WLED integration did not handle RGBCCT strips correctly before its 2026.10 releases, which include some fixes for [issue #146123](https://github.com/home-assistant/core/issues/146123) and [issue #162142](https://github.com/home-assistant/core/issues/162142). However, issues remain when color accuracy and setting colors from custom_components. See also [WLED issue #4641](https://github.com/wled/WLED/issues/4641), which is still open, and [this Home Assistant community post](https://community.home-assistant.io/t/wled-rgb-cct-led-strips-dont-work-correctly-in-home-assistant/963514/9).
 
 ## Why a custom component
 
@@ -56,7 +60,7 @@ The configuration template uses ESPHome substitutions for easy customization. Yo
 | `ws2811_color_gamma` | Decodes colors for the LEDs. 2.2 matches how Home Assistant encodes them | `2.2` |
 | `ws2811_brightness_gamma` | Curve of the brightness slider. Lower it to lift the bottom of the slider | `2.2` |
 | `ws2811_default_red_balance` | Starting value of the Red Balance slider | `100` |
-| `ws2811_default_green_balance` | Starting value of the Green Balance slider | `90` |
+| `ws2811_default_green_balance` | Starting value of the Green Balance slider | `60` |
 | `ws2811_default_blue_balance` | Starting value of the Blue Balance slider | `35` |
 | `ws2811_default_white_strength` | Starting value of the White Strength slider | `100` |
 | `controller_device_friendly_name` | Frontend friendly name of the WS2811 strip light entity | `WS2811 Dual IC RGBCCT LED Strip Controller` |
@@ -100,21 +104,16 @@ The strip driver is 8-bit, so very dim settings have few steps. Below roughly 10
 
 ### Matching Philips Hue
 
-The defaults are estimates, because LED output varies between strips. Set these next to a Hue bulb, with the room otherwise dark. Each slider applies immediately.
+The defaults were tuned by eye on one strip, and LED output varies between strips. Set these next to a Hue bulb, with the room otherwise dark. Each slider applies immediately.
+
+The calibration sliders and the **Use White LEDs for Colors** switch are disabled by default. Enable them first on the device's page in Home Assistant, under its disabled entities.
 
 1. Turn off **Use White LEDs for Colors**. Set the strip and the bulb to the same white with `rgb_color: [255, 255, 255]`.
 2. Lower the **Red**, **Green** and **Blue Balance** sliders until the strip stops looking tinted. Keep the strongest of the three at 100%.
 3. Turn **Use White LEDs for Colors** back on. Compare a pale color on both, such as `rgb_color: [255, 180, 200]`.
 4. Raise **White Strength** if the strip looks too pale, and lower it if the strip looks too saturated.
 
-Near-white scenes such as Read and Concentrate use the white LEDs almost alone, so they depend mostly on your strip's `ws2811_cw_color_temp` and `ws2811_ww_color_temp` being accurate. Colors warmer than the warm LEDs or cooler than the cold LEDs add a small tint from the color LEDs.
-
-### Moving from version 1
-
-* The `RGB Effects` light is gone. Effects are now on the `RGBCCT` light, so update anything that used the old entity.
-* `Maximum Brightness` is now `Power Limit`, with a different meaning and a new default.
-* `partition` segments and the `Direct Control` effect are no longer used, and `ws2811_strip_num_ics` is the only length setting.
-* `ws2811_default_max_brightness` is replaced by `ws2811_default_power_limit`.
+Near-white colors use the white LEDs almost alone, so they depend mostly on your strip's `ws2811_cw_color_temp` and `ws2811_ww_color_temp` being accurate. Colors warmer than the warm LEDs or cooler than the cold LEDs add a small tint from the color LEDs.
 
 ### Testing
 
@@ -122,7 +121,15 @@ Near-white scenes such as Read and Concentrate use the white LEDs almost alone, 
 
 ### Installing
 
-* Install using ESPHome's excellent [getting started guide](https://esphome.io/install/).
+1. Install ESPHome using its [getting started guide](https://esphome.io/install/).
+2. Clone this repository, or copy the YAML file as described under [Requirements](#requirements).
+3. Copy `secrets-example.yaml` to `secrets.yaml` in the same folder and fill in every value. Generate the API encryption key with `openssl rand -base64 32`. Never commit `secrets.yaml`.
+4. Adjust the substitutions at the top of `ws2811-dual-ic-controller.yaml` for your strip and board.
+5. Flash the device. The first install usually needs a USB connection, and later installs can go over the air.
+
+```sh
+esphome run ws2811-dual-ic-controller.yaml
+```
 
 ## Help
 
@@ -144,6 +151,3 @@ This project is licensed under the GNU General Public License - see the LICENSE 
 * [ESPHome RMT IR Devices Setup Guide](https://esphome.io/guides/setting_up_rmt_devices/#setting-up-ir-devices)
 * [ESPHome I2S Audio Microphone Component Documentation](https://esphome.io/components/microphone/i2s_audio/)
 * [WLED RGBCCT Strip Discussion](https://github.com/wled/WLED/issues/4641)
-
-## AI Disclaimer
-This template was created with the assistance of generative AI programming tools. However, it was primarily written, edited, extensively reviewed, and tested by a professional software developer.

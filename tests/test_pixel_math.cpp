@@ -1,4 +1,4 @@
-// Desktop tests for the colour math. Run tests/run.sh, or build this file with any C++17 compiler.
+// Desktop tests for the color math. Run tests/run.sh, or build this file with any C++17 compiler.
 
 #include <cassert>
 #include <cmath>
@@ -10,7 +10,7 @@ using namespace esphome::ws2811_dual_ic;
 
 static bool near(float a, float b) { return std::fabs(a - b) < 1e-5f; }
 
-static void test_dim_colour_stays_a_colour() {
+static void test_dim_color_stays_a_color() {
   // The drive of orange so dim that only the strongest channel can stay lit.
   const float drive[3] = {0.0015f, 0.0002f, 0.00001f};
   uint8_t levels[3];
@@ -40,7 +40,7 @@ static void test_limit_only_acts_above_the_budget() {
 }
 
 static void test_limit_is_exactly_the_budget() {
-  Drive white;  // white made from the colour LEDs: three of five channels
+  Drive white;  // white made from the color LEDs: three of five channels
   white.level[RED] = white.level[GREEN] = white.level[BLUE] = 1.0f;
   const float scale = limit_scale(white.load(), 0.15f);
   assert(near(white.load() * scale, 0.15f));
@@ -81,7 +81,7 @@ static void test_lerp_ends() {
 static const WhiteLeds LEDS{{0.9655f, 1.0183f, 0.9474f}, {1.3358f, 0.9050f, 0.3326f}};
 static const float NEUTRAL[3] = {1.0f, 1.0f, 1.0f};
 
-static void test_saturated_colour_uses_no_white() {
+static void test_saturated_color_uses_no_white() {
   const float red[3] = {1.0f, 0.0f, 0.0f};
   const Drive drive = mix_color(red, NEUTRAL, LEDS, 1.0f, true);
   assert(near(drive.level[RED], 1.0f));
@@ -105,7 +105,7 @@ static void test_mid_white_blends_both_leds() {
   assert(drive.level[RED] < 0.001f && drive.level[GREEN] < 0.001f && drive.level[BLUE] < 0.001f);
 }
 
-static void test_mix_rebuilds_the_colour() {
+static void test_mix_rebuilds_the_color() {
   const float pastel[3] = {1.0f, 0.5f, 0.6f};
   const WhiteContent white = find_white(pastel, LEDS);
   assert(white.amount > 0.0f);
@@ -130,14 +130,14 @@ static void test_white_mix_can_be_turned_off() {
   assert(near(drive.level[RED], 1.0f));
 }
 
-static void test_balance_keeps_a_pure_colour_at_full() {
+static void test_balance_keeps_a_pure_color_at_full() {
   const float blue[3] = {0.0f, 0.0f, 1.0f};
   const float balance[3] = {1.0f, 0.9f, 0.35f};
   assert(near(mix_color(blue, balance, LEDS, 1.0f, true).level[BLUE], 1.0f));
 }
 
 int main() {
-  test_dim_colour_stays_a_colour();
+  test_dim_color_stays_a_color();
   test_black_stays_black();
   test_rounding_and_clamping();
   test_limit_only_acts_above_the_budget();
@@ -146,13 +146,13 @@ int main() {
   test_additive_white_doubles_in_the_middle();
   test_white_clamps_outside_the_range();
   test_lerp_ends();
-  test_saturated_colour_uses_no_white();
+  test_saturated_color_uses_no_white();
   test_led_white_uses_only_that_led();
   test_mid_white_blends_both_leds();
-  test_mix_rebuilds_the_colour();
+  test_mix_rebuilds_the_color();
   test_stronger_white_leds_are_driven_less();
   test_white_mix_can_be_turned_off();
-  test_balance_keeps_a_pure_colour_at_full();
+  test_balance_keeps_a_pure_color_at_full();
   puts("pixel_math: all tests passed");
   return 0;
 }
