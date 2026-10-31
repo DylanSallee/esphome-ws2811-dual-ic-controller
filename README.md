@@ -10,34 +10,55 @@ By default, GPIO pins are defined for a SMLIGHT A1-SLWF-03 device. This template
 
 While WLED is compatible with these strips as of 16.0.1, the integration with Home Assistant does not handle RGBCCT strips correctly at this time (2026-08-08). See [issue #146123](https://github.com/home-assistant/core/issues/146123), [issue #162142](https://github.com/home-assistant/core/issues/162142) and [issue #4641](https://github.com/wled/WLED/issues/4641), along with [this home assistant community post](https://community.home-assistant.io/t/wled-rgb-cct-led-strips-dont-work-correctly-in-home-assistant/963514/9).
 
+## Why a custom component
+
+ESPHome still has no five channel strip support, as of 2026.10.1. A pull request that added it ([#12414](https://github.com/esphome/esphome/pull/12414)) was closed unmerged in May 2026, and `channel_colors` only accepts RGB or RGBW. So this repository includes `ws2811_dual_ic`, a small light platform that sits on top of ESPHome's normal strip driver.
+
+Each physical segment of the strip has two WS2811 ICs. The component treats that pair as one pixel, so ESPHome effects run per segment and no segment list is needed.
+
 ## Features
 
-* **WS2811 Dual-IC RGBCCT Support**: Native control for WS2811 Dual-IC FCOB RGBCCT LED strips using an interleaved IC layout (even ICs for RGB, odd ICs for CCT).
-* **Dual Virtual Light Entities**: Exposes two lights in Home Assistant: one with full RGBCCT color/temperature control and one for RGB effects.
-* **Native ESPHome Addressable Effects**: Includes native ESPHome addressable effects (rainbow, scan, twinkle, fireworks, flicker, strobe, pulse) and optional WLED integration.
-* **Configurable Maximum Brightness**: Configurable maximum brightness limit slider in Home Assistant to protect LED strips from overheating.
+* **One RGBCCT Light**: Colors, white and effects all live on a single light entity in Home Assistant.
+* **Colors Close to Philips Hue**: Colors are decoded the way Home Assistant encodes them. The white LEDs supply any white a color contains, as they do in a Hue bulb, so near-white scenes look right and saturated colors stay pure.
+* **Live Calibration**: Sliders in Home Assistant balance the LEDs against a reference light, with no reflash.
+* **Hue Preserved When Dim**: Gamma and brightness are applied once, in floating point, as each frame is sent. A dim color stays that color instead of drifting to white.
+* **Flat White**: Brightness stays the same across the color temperature range. Set `constant_brightness: false` to let the middle of the range run at twice the output.
+* **Crossfades**: Changes between a color and white crossfade instead of dipping through black.
+* **Power Limit**: A slider in Home Assistant caps the strip's total power, so a pure color or white can run far brighter than a mixed color at the same heat. The value survives a reboot.
+* **Native ESPHome Addressable Effects**: Includes rainbow, scan, twinkle, fireworks, flicker, strobe and pulse, and optional WLED integration. Effects use the color LEDs only.
+* **No Idle Traffic**: The strip is only sent data when something changes.
+* **Restores After Power Loss**: The light returns to its last state after a reboot.
 * **Flexible Substitutions**: Easily configurable YAML substitutions for LED counts, color temperatures, GPIO pin maps, device names, and network options.
 * **Hardware Integration (SMLIGHT A1-SLWF-03 / ESP32)**:
   * **Status LEDs**: Automated network connection indication via green and blue status LEDs.
   * **Touch Button**: Capacitive TTP223 touch button binary sensor.
   * **IR Receiver**: Remote receiver integration set up for raw IR command logging and mapping.
   * **I2S Audio Microphone**: Ambient sound level monitoring with average and peak sound level sensors.
-* **System Diagnostics & Management**: Real-time diagnostic sensors for internal ESP32 temperature, uptime, free memory, loop time, free heap, reset reason, and device controls (restart, safe mode, shutdown, factory reset).
+* **System Diagnostics & Management**: Real-time diagnostic sensors for strip load, internal ESP32 temperature, uptime, free memory, loop time, free heap, reset reason, and device controls (restart, safe mode, shutdown, factory reset).
 
 ## Getting Started
+
+### Requirements
+
+ESPHome 2026.10.0 or later is required. Keep the `components` folder next to the YAML file. If you only copy the YAML file, change `external_components` to the GitHub source shown in its comment.
 
 ### Configuration
 
 The configuration template uses ESPHome substitutions for easy customization. You can adjust these values at the top of `ws2811-dual-ic-controller.yaml` to match your specific setup and pin mapping. Additional information is included in the configuration file.
 
-**Important:** If you adjust the number of leds (`ws2811_strip_num_leds`), you must also update the `segments` array under `light` -> `partition` -> `partition_effects`.
-
 | Substitution Option | Description | Default Value |
 | --- | --- | --- |
-| `ws2811_strip_num_ics` | Total number of ICs on the LED strip (should be double the physical segment count) | `28` |
+| `ws2811_strip_num_ics` | Total number of ICs on the LED strip (double the physical segment count) | `28` |
+| `ws2811_wire_order` | Byte order of one segment. See below | `RGBWCX` |
 | `ws2811_cw_color_temp` | Color temperature of the cold white LEDs in Kelvin | `6000 K` |
 | `ws2811_ww_color_temp` | Color temperature of the warm white LEDs in Kelvin | `3000 K` |
-| `ws2811_default_max_brightness` | Default maximum brightness percentage limit to prevent overheating | `25` |
+| `ws2811_default_power_limit` | Default Power Limit percentage | `15` |
+| `ws2811_color_gamma` | Decodes colors for the LEDs. 2.2 matches how Home Assistant encodes them | `2.2` |
+| `ws2811_brightness_gamma` | Curve of the brightness slider. Lower it to lift the bottom of the slider | `2.2` |
+| `ws2811_default_red_balance` | Starting value of the Red Balance slider | `100` |
+| `ws2811_default_green_balance` | Starting value of the Green Balance slider | `90` |
+| `ws2811_default_blue_balance` | Starting value of the Blue Balance slider | `35` |
+| `ws2811_default_white_strength` | Starting value of the White Strength slider | `100` |
 | `controller_device_friendly_name` | Frontend friendly name of the WS2811 strip light entity | `WS2811 Dual IC RGBCCT LED Strip Controller` |
 | `controller_device_id` | Backend entity ID of the custom sub-device grouping | `ws2811_controller` |
 | `controller_device_led_data_pin` | GPIO pin connected to the LED strip data line | `GPIO16` |
@@ -50,7 +71,7 @@ The configuration template uses ESPHome substitutions for easy customization. Yo
 | `controller_device_microphone_i2s_din_pin` | GPIO pin connected to the microphone I2S DIN pin | `GPIO32` |
 | `node_friendly_name` | Frontend friendly name of the ESPHome node | `SMLIGHT A1-SLWF-03` |
 | `node_name` | Backend hostname / name of the ESPHome node | `smlight-a1-slwf-03` |
-| `log_level` | Logging verbosity level (DEBUG, INFO, WARNING, ERROR) | `DEBUG` |
+| `log_level` | Logging verbosity level (DEBUG, INFO, WARNING, ERROR) | `INFO` |
 | `static_ip` | Static IP address for manual IP configuration (optional, commented out) | `192.168.xxx.xxx` |
 | `gateway` | Network gateway IP address (optional, commented out) | `192.168.xxx.xxx` |
 | `subnet` | Network subnet mask (optional, commented out) | `255.255.255.xxx` |
@@ -58,6 +79,46 @@ The configuration template uses ESPHome substitutions for easy customization. Yo
 To save resources, I recommend disabling (commenting out) the IR receiver and microphone components if you do not intend to use them in your project.
 
 This project can be compiled using the `arduino` or `esp-idf` framework. If using the ESPHome WLED effect integration, the project must be compiled using the `arduino` framework.
+
+### Wire order
+
+`ws2811_wire_order` lists the six bytes of one segment in the order the ICs expect them. `R`, `G` and `B` are the color LEDs, `C` is cold white, `W` is warm white, and `X` is the unused byte. The first three letters belong to the segment's first IC.
+
+The default, `RGBWCX`, was worked out on a BTF-LIGHTING strip. If colors or whites look swapped, set one color at a time and adjust the order. For example, `WCXRGB` means the white IC comes first. Leave `channel_colors` on the strip driver set to `RGB`.
+
+### Power Limit
+
+The Power Limit caps the strip's average output, where 100% means all five channels fully on. A single color or white channel at full is 20%, and white made from the color LEDs is 60%.
+
+The brightness slider keeps its full range under the limit. When a color would exceed it, the whole color is scaled down at full brightness, so 100% on the slider means the brightest that color can be within the limit.
+
+The limit assumes every channel draws the same current. Treat it as a guide and check the strip's temperature, especially on the spool.
+
+### Tuning the look
+
+The strip driver is 8-bit, so very dim settings have few steps. Below roughly 10% on the brightness slider, the strip may hold at its lowest level. This is a limit of the WS2811, and a lower `ws2811_brightness_gamma` shifts more of the slider above it.
+
+### Matching Philips Hue
+
+The defaults are estimates, because LED output varies between strips. Set these next to a Hue bulb, with the room otherwise dark. Each slider applies immediately.
+
+1. Turn off **Use White LEDs for Colors**. Set the strip and the bulb to the same white with `rgb_color: [255, 255, 255]`.
+2. Lower the **Red**, **Green** and **Blue Balance** sliders until the strip stops looking tinted. Keep the strongest of the three at 100%.
+3. Turn **Use White LEDs for Colors** back on. Compare a pale color on both, such as `rgb_color: [255, 180, 200]`.
+4. Raise **White Strength** if the strip looks too pale, and lower it if the strip looks too saturated.
+
+Near-white scenes such as Read and Concentrate use the white LEDs almost alone, so they depend mostly on your strip's `ws2811_cw_color_temp` and `ws2811_ww_color_temp` being accurate. Colors warmer than the warm LEDs or cooler than the cold LEDs add a small tint from the color LEDs.
+
+### Moving from version 1
+
+* The `RGB Effects` light is gone. Effects are now on the `RGBCCT` light, so update anything that used the old entity.
+* `Maximum Brightness` is now `Power Limit`, with a different meaning and a new default.
+* `partition` segments and the `Direct Control` effect are no longer used, and `ws2811_strip_num_ics` is the only length setting.
+* `ws2811_default_max_brightness` is replaced by `ws2811_default_power_limit`.
+
+### Testing
+
+`tests/run.sh` runs the color math tests, then runs the real component on your computer against a fake strip and checks every byte it would have sent. This needs no hardware. Set `ESPHOME` to choose which ESPHome to use.
 
 ### Installing
 
@@ -73,7 +134,7 @@ If you need any assistance, feel free to open an issue.
 
 ## License
 
-This project is licensed under the GNU General Public License - see the LICENSE.md file for details.
+This project is licensed under the GNU General Public License - see the LICENSE file for details.
 
 ## Useful Links
 
@@ -82,6 +143,7 @@ This project is licensed under the GNU General Public License - see the LICENSE.
 * [ESPHome Remote Receiver Component Documentation](https://esphome.io/components/remote_receiver/)
 * [ESPHome RMT IR Devices Setup Guide](https://esphome.io/guides/setting_up_rmt_devices/#setting-up-ir-devices)
 * [ESPHome I2S Audio Microphone Component Documentation](https://esphome.io/components/microphone/i2s_audio/)
+* [WLED RGBCCT Strip Discussion](https://github.com/wled/WLED/issues/4641)
 
 ## AI Disclaimer
-This template was created with the assistance of generative AI programming tools. However, it was primarially written, edited, extensively reviewed, and tested by a professional software developer.
+This template was created with the assistance of generative AI programming tools. However, it was primarily written, edited, extensively reviewed, and tested by a professional software developer.

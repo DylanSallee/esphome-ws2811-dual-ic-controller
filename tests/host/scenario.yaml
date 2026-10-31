@@ -1,0 +1,164 @@
+# Runs the real light on a desktop against a fake strip, then tests/check_scenario.py reads the frames.
+# Each step prints a STEP marker, and every frame the strip would have received follows it.
+
+esphome:
+  name: dual-ic-scenario
+  on_boot:
+    priority: -100
+    then:
+      - script.execute: scenario
+
+host:
+
+logger:
+  level: WARN
+
+external_components:
+  - source: ../../components
+    components: [ws2811_dual_ic]
+  - source: components
+    components: [capture_strip]
+
+light:
+  - platform: capture_strip
+    id: strip
+    internal: true
+    num_leds: 28
+
+  - platform: ws2811_dual_ic
+    name: "Dual IC"
+    id: dual
+    output_id: dual_output
+    strip_id: strip
+    wire_order: RGBWCX
+    cold_white_color_temperature: 6000 K
+    warm_white_color_temperature: 3000 K
+    default_transition_length: 0s
+    power_limit: 100%
+    white_mix: false
+    effects:
+      - addressable_rainbow:
+          name: Rainbow
+      - addressable_lambda:
+          name: Hold
+          update_interval: 50ms
+          lambda: |-
+            // Reads pixels back. If the output path altered them this would drift.
+            if (initial_run) {
+              it.all() = Color(200, 100, 50);
+            } else {
+              Color color = it[3].get();
+              it[3] = color;
+            }
+
+script:
+  - id: mark
+    parameters:
+      text: string
+    then:
+      - lambda: |-
+          printf("STEP %s\n", text.c_str());
+          fflush(stdout);
+
+  - id: scenario
+    then:
+      - delay: 100ms
+      - script.execute: { id: mark, text: "red_full" }
+      - light.turn_on: { id: dual, red: 100%, green: 0%, blue: 0%, brightness: 100%, transition_length: 0s }
+      - delay: 100ms
+      - script.execute: { id: mark, text: "orange_full" }
+      - light.turn_on: { id: dual, red: 100%, green: 50%, blue: 0%, brightness: 100%, transition_length: 0s }
+      - delay: 100ms
+      - script.execute: { id: mark, text: "orange_dim" }
+      - light.turn_on: { id: dual, red: 100%, green: 50%, blue: 8%, brightness: 3%, transition_length: 0s }
+      - delay: 100ms
+      - script.execute: { id: mark, text: "white_cold" }
+      - light.turn_on: { id: dual, color_temperature: 6000 K, brightness: 100%, transition_length: 0s }
+      - delay: 100ms
+      - script.execute: { id: mark, text: "white_mid" }
+      - light.turn_on: { id: dual, color_temperature: 4000 K, brightness: 100%, transition_length: 0s }
+      - delay: 100ms
+      - script.execute: { id: mark, text: "white_warm" }
+      - light.turn_on: { id: dual, color_temperature: 3000 K, brightness: 100%, transition_length: 0s }
+      - delay: 100ms
+      - script.execute: { id: mark, text: "crossfade_to_red" }
+      - light.turn_on: { id: dual, red: 100%, green: 0%, blue: 0%, brightness: 100%, transition_length: 400ms }
+      - delay: 600ms
+      - script.execute: { id: mark, text: "white_for_limit" }
+      - light.turn_on: { id: dual, red: 100%, green: 100%, blue: 100%, brightness: 100%, transition_length: 0s }
+      - delay: 100ms
+      - script.execute: { id: mark, text: "limit_15" }
+      - lambda: id(dual_output).set_power_limit(0.15f);
+      - delay: 100ms
+      - script.execute: { id: mark, text: "limit_15_red" }
+      - light.turn_on: { id: dual, red: 100%, green: 0%, blue: 0%, brightness: 100%, transition_length: 0s }
+      - delay: 100ms
+      - script.execute: { id: mark, text: "limit_15_half_brightness" }
+      - light.turn_on: { id: dual, brightness: 50%, transition_length: 0s }
+      - delay: 100ms
+      - lambda: id(dual_output).set_power_limit(1.0f);
+      - script.execute: { id: mark, text: "fade_off" }
+      - light.turn_on: { id: dual, brightness: 100%, transition_length: 0s }
+      - delay: 50ms
+      - light.turn_off: { id: dual, transition_length: 300ms }
+      - delay: 500ms
+      - script.execute: { id: mark, text: "fade_on_new_colour" }
+      - light.turn_on: { id: dual, red: 0%, green: 0%, blue: 100%, brightness: 100%, transition_length: 300ms }
+      - delay: 500ms
+      - script.execute: { id: mark, text: "interrupted" }
+      - light.turn_on: { id: dual, color_temperature: 3000 K, transition_length: 400ms }
+      - delay: 150ms
+      - light.turn_on: { id: dual, red: 0%, green: 100%, blue: 0%, transition_length: 200ms }
+      - delay: 400ms
+      - script.execute: { id: mark, text: "effect_from_white" }
+      - light.turn_on: { id: dual, color_temperature: 3000 K, transition_length: 0s }
+      - delay: 50ms
+      - light.turn_on: { id: dual, effect: Rainbow }
+      - delay: 200ms
+      - script.execute: { id: mark, text: "effect_stop" }
+      - light.turn_on: { id: dual, effect: None, brightness: 100% }
+      - delay: 100ms
+      - script.execute: { id: mark, text: "effect_fade_off" }
+      - light.turn_on: { id: dual, effect: Rainbow }
+      - delay: 100ms
+      - light.turn_off: { id: dual, transition_length: 300ms }
+      - delay: 500ms
+      - script.execute: { id: mark, text: "after_effect_fade" }
+      - light.turn_on: { id: dual, color_temperature: 3000 K, brightness: 100%, transition_length: 0s }
+      - delay: 100ms
+      - script.execute: { id: mark, text: "effect_readback" }
+      - light.turn_on: { id: dual, effect: Hold }
+      - delay: 400ms
+      - script.execute: { id: mark, text: "effect_half_brightness" }
+      - light.turn_on: { id: dual, brightness: 50%, transition_length: 0s }
+      - delay: 200ms
+      - script.execute: { id: mark, text: "effect_limit_5" }
+      - lambda: id(dual_output).set_power_limit(0.05f);
+      - light.turn_on: { id: dual, brightness: 100%, transition_length: 0s }
+      - delay: 200ms
+      - lambda: id(dual_output).set_power_limit(1.0f);
+      - script.execute: { id: mark, text: "effect_flash" }
+      - light.turn_on: { id: dual, effect: None, red: 100%, green: 0%, blue: 0%, brightness: 100% }
+      - delay: 50ms
+      - light.turn_on: { id: dual, color_temperature: 3000 K, flash_length: 200ms }
+      - delay: 500ms
+      - script.execute: { id: mark, text: "white_mix_warm" }
+      - lambda: id(dual_output).set_white_mix(true);
+      - light.turn_on: { id: dual, red: 100%, green: 83%, blue: 51%, brightness: 100%, transition_length: 0s }
+      - delay: 100ms
+      - script.execute: { id: mark, text: "white_mix_red" }
+      - light.turn_on: { id: dual, red: 100%, green: 0%, blue: 0%, transition_length: 0s }
+      - delay: 100ms
+      - script.execute: { id: mark, text: "balance_live" }
+      - lambda: |-
+          id(dual_output).set_white_mix(false);
+          id(dual_output).set_color_balance(1, 0.5f);
+      - light.turn_on: { id: dual, red: 100%, green: 100%, blue: 0%, transition_length: 0s }
+      - delay: 100ms
+      - lambda: id(dual_output).set_color_balance(1, 1.0f);
+      - delay: 100ms
+      - script.execute: { id: mark, text: "idle" }
+      - delay: 300ms
+      - script.execute: { id: mark, text: "done" }
+      - delay: 50ms
+      - lambda: exit(0);
