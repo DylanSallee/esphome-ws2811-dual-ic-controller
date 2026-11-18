@@ -25,20 +25,12 @@ void WS2811DualICLight::setup() {
     return;
   }
   RAMAllocator<uint8_t> allocator;
-  this->frame_ = allocator.allocate(pixels * 3);
-  this->effect_data_ = allocator.allocate(pixels);
-  if (this->frame_ == nullptr || this->effect_data_ == nullptr) {
+  if (!this->frame_.allocate(allocator, pixels)) {
     ESP_LOGE(TAG, "Cannot allocate the frame buffers");
-    this->frame_ = nullptr;
     this->mark_failed();
     return;
   }
-  memset(this->frame_, 0, pixels * 3);
-  memset(this->effect_data_, 0, pixels);
-#ifdef WS2811_DUAL_IC_COLOR_ACCESSOR
-  this->frame_accessor_ = light::RawBufferColorAccessor(this->frame_, this->effect_data_, light::ChannelColors(0, 1, 2));
-  this->accessor_ = &this->frame_accessor_;
-#endif
+  this->accessor_ = &this->frame_;
 
   // With nothing restored, the strip's own light starts a default fade to black at boot, and every
   // step of it would repaint the bytes sent below. Finish it now.
@@ -96,11 +88,11 @@ void WS2811DualICLight::set_white_mix(bool white_mix) {
 }
 
 void WS2811DualICLight::clear_effect_data() {
-  if (this->frame_ == nullptr)
+  if (this->frame_.color_data == nullptr)
     return;
   // An effect should start from black, not from whatever the last effect left behind.
-  memset(this->frame_, 0, this->size() * 3);
-  memset(this->effect_data_, 0, this->size());
+  memset(this->frame_.color_data, 0, this->size() * 3);
+  this->frame_.clear_effect_data(this->size());
 }
 
 light::LightTraits WS2811DualICLight::get_traits() {
@@ -151,7 +143,7 @@ void WS2811DualICLight::update_state(light::LightState *state) {
 }
 
 void WS2811DualICLight::write_state(light::LightState *state) {
-  if (this->frame_ == nullptr)
+  if (this->frame_.color_data == nullptr)
     return;
   const float brightness = this->brightness_ > 0.0f ? std::pow(this->brightness_, this->brightness_gamma_) : 0.0f;
   this->frame_on_strip_ = this->is_effect_active() || this->fading_frame_;
@@ -185,7 +177,7 @@ void WS2811DualICLight::render_effect_(float brightness) {
   const int32_t pixels = this->size();
   float frame_load = 0.0f;
   for (int32_t pixel = 0; pixel < pixels; pixel++) {
-    const uint8_t *color = this->frame_ + pixel * 3;
+    const uint8_t *color = this->frame_.color_data + pixel * 3;
     for (size_t channel = RED; channel <= BLUE; channel++)
       frame_load += this->color_gamma_table_[color[channel]] * this->balance_.level[channel];
   }
@@ -194,7 +186,7 @@ void WS2811DualICLight::render_effect_(float brightness) {
   const float scale = brightness * limit_scale(frame_load, this->power_limit_);
   uint32_t sum = 0;
   for (int32_t pixel = 0; pixel < pixels; pixel++) {
-    const uint8_t *color = this->frame_ + pixel * 3;
+    const uint8_t *color = this->frame_.color_data + pixel * 3;
     float scaled[NUM_CHANNELS]{};
     uint8_t levels[NUM_CHANNELS]{};
     for (size_t channel = RED; channel <= BLUE; channel++)
@@ -216,26 +208,8 @@ void WS2811DualICLight::send_pixel_(int32_t pixel, const uint8_t *levels) {
 
 void WS2811DualICLight::send_ic_(int32_t index, const uint8_t *bytes) {
   // The strip's own brightness and gamma must not touch these bytes.
-#ifdef WS2811_DUAL_IC_COLOR_ACCESSOR
   (*this->strip_())[index].set_raw(Color(bytes[0], bytes[1], bytes[2]));
-#else
-  light::ESPColorView view = (*this->strip_())[index];
-  view.raw_set_color_correction(&this->passthrough_);
-  view.set_rgb(bytes[0], bytes[1], bytes[2]);
-#endif
 }
-
-#ifndef WS2811_DUAL_IC_COLOR_ACCESSOR
-light::ESPColorView WS2811DualICLight::get_view_internal(int32_t index) const {
-  // LightState keeps running effects after a failed setup(), so give them somewhere safe to write.
-  static uint8_t scratch[3];
-  if (this->frame_ == nullptr)
-    return {scratch, scratch + 1, scratch + 2, nullptr, nullptr, &this->passthrough_};
-  // The white pointer stays null, so an effect can never add white to a color.
-  uint8_t *color = this->frame_ + index * 3;
-  return {color, color + 1, color + 2, nullptr, this->effect_data_ + index, &this->passthrough_};
-}
-#endif
 
 std::unique_ptr<light::LightTransformer> WS2811DualICLight::create_default_transition() {
   return make_unique<CrossfadeTransformer>(*this);

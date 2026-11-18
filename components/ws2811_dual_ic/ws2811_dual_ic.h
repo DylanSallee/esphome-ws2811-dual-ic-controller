@@ -8,12 +8,6 @@
 
 #include "pixel_math.h"
 
-// ESPHome PR #21577 replaces get_view_internal() with a color accessor. It adds this file, which
-// is a safer test than a version number because the PR has no confirmed release yet.
-#if __has_include("esphome/components/light/esp_color_view.cpp")
-#define WS2811_DUAL_IC_COLOR_ACCESSOR
-#endif
-
 namespace esphome::ws2811_dual_ic {
 
 /// One RGB + CCT light on a strip with two WS2811 ICs per pixel.
@@ -72,13 +66,6 @@ class WS2811DualICLight final : public light::AddressableLight {
   std::unique_ptr<light::LightTransformer> create_default_transition() override;
 
  protected:
-#ifdef WS2811_DUAL_IC_COLOR_ACCESSOR
-  light::RawBufferColorAccessor frame_accessor_;
-#else
-  light::ESPColorView get_view_internal(int32_t index) const override;
-  /// A default correction changes nothing, unlike correction_, which color_correct would touch.
-  light::ESPColorCorrection passthrough_{};
-#endif
 
   /// Recompute the shown color after a calibration change.
   void refresh_();
@@ -93,8 +80,11 @@ class WS2811DualICLight final : public light::AddressableLight {
   void send_ic_(int32_t index, const uint8_t *bytes);
 
   light::AddressableLightState *strip_state_{nullptr};
-  uint8_t *frame_{nullptr};
-  uint8_t *effect_data_{nullptr};
+  /// The frame effects draw into, three bytes per pixel. It is raw, because gamma, brightness and the
+  /// power limit are applied as it is sent. It has no white byte, so an effect can never add white to a
+  /// color. Until setup() allocates it, accessor_ stays ESPHome's null accessor, so an effect that runs
+  /// early or after a failed setup writes nowhere.
+  light::RawBufferColorAccessor frame_{nullptr, nullptr, light::ChannelColors(0, 1, 2)};
   float color_gamma_table_[256]{};
 
   uint8_t wire_offset_[NUM_CHANNELS]{0, 1, 2, 4, 3};  // "RGBWCX"

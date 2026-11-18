@@ -19,7 +19,7 @@ WLED is compatible with these strips as of 16.0.1. Home Assistant's WLED integra
 
 ## Why a custom component?
 
-ESPHome still has no five channel strip support, as of 2026.10.1. A pull request that added it ([#12414](https://github.com/esphome/esphome/pull/12414)) was closed unmerged in May 2026, and `channel_colors` only accepts RGB or RGBW. So this repository includes `ws2811_dual_ic`, a small light platform that sits on top of ESPHome's normal strip driver.
+ESPHome still has no five channel strip support, as of 2026.11.0. A pull request that added it ([#12414](https://github.com/esphome/esphome/pull/12414)) was closed unmerged in May 2026, and `channel_colors` only accepts RGB or RGBW. So this repository includes `ws2811_dual_ic`, a small light platform that sits on top of ESPHome's normal strip driver.
 
 Each physical segment of the strip has two WS2811 ICs. The component treats that pair as one pixel, so ESPHome effects run per segment and no segment list is needed.
 
@@ -47,7 +47,7 @@ Each physical segment of the strip has two WS2811 ICs. The component treats that
 
 ### Requirements
 
-ESPHome 2026.10.0 or later is required. Keep the `components` folder next to the YAML file. If you only copy the YAML file, change `external_components` to the GitHub source shown in its comment.
+ESPHome 2026.11.0 or later is required. For ESPHome 2026.10, use [version 2.2](https://github.com/DylanSallee/esphome-ws2811-dual-ic-controller/tree/v2.2). Keep the `components` folder next to the YAML file. If you only copy the YAML file, change `external_components` to the GitHub source shown in its comment.
 
 ### Configuration
 
